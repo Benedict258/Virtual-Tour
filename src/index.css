@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'Playfair Display', serif;
+
+  --color-coral: #E8385A;
+  --color-teal: #007A74;
+  --color-gold: #F5A623;
+  --color-dark: #0F0F0F;
+  --color-cream: #FAF8F4;
+}
+
+@layer base {
+  body {
+    @apply bg-cream font-sans text-dark;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display text-dark;
+  }
+}
+
+@layer utilities {
+  .scrollbar-hide {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
