@@ -1,5 +1,5 @@
 import React from 'react';
-import { Eye, TrendingUp } from 'lucide-react';
+import { Eye, TrendingUp, Clock } from 'lucide-react';
 import { Tour } from '../types';
 import { CATEGORY_STYLES } from '../constants';
 import { cn } from '../lib/utils';
@@ -14,52 +14,51 @@ const TourCard: React.FC<TourCardProps> = ({ tour, variant = 'standard' }) => {
   
   return (
     <div className={cn(
-      "group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer flex-shrink-0 border border-gray-100",
-      isCompact ? "w-48" : "w-64"
+      "group bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 cursor-pointer flex-shrink-0 border border-border/40 hover:-translate-y-1 snap-start",
+      isCompact ? "w-64 md:w-80" : "w-full"
     )}>
       <div className={cn(
-        "relative overflow-hidden",
-        isCompact ? "h-36" : "h-44",
+        "relative overflow-hidden aspect-video",
         tour.imgClass,
         "bg-cover bg-center"
       )}>
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300" />
+        <div className="absolute inset-0 bg-black/10 group-hover:bg-black/20 transition-colors duration-300" />
         
         <span className={cn(
-          "absolute top-3 left-3 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase",
+          "absolute top-3 left-3 px-2 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider backdrop-blur-md",
           CATEGORY_STYLES[tour.category]
         )}>
           {tour.category}
         </span>
         
-        <span className="absolute bottom-3 right-3 bg-black/60 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-md font-medium">
+        <div className="absolute bottom-3 right-3 bg-black/70 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-md font-semibold flex items-center gap-1.5 shadow-lg">
+          <Clock className="size-3" />
           {tour.duration}
-        </span>
+        </div>
       </div>
 
-      <div className="p-4">
-        <h3 className="font-sans font-semibold text-sm leading-tight line-clamp-2 group-hover:text-teal transition-colors">
+      <div className="p-4 md:p-5 flex flex-col gap-2">
+        <h3 className="font-bold text-base md:text-lg text-dark group-hover:text-coral transition-colors line-clamp-1">
           {tour.title}
         </h3>
         
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-3 text-[10px] md:text-xs text-gray-500">
-          <div className="flex items-center gap-1">
-            <Eye className="w-3 h-3" />
-            <span>{tour.views}</span>
+        <div className="flex flex-wrap items-center gap-3 text-xs md:text-sm text-muted-foreground font-medium">
+          <div className="flex items-center gap-1.5">
+            <Eye className="size-4" />
+            <span>{tour.views} views</span>
           </div>
           
           {tour.trend && (
-            <div className="flex items-center gap-1 text-green-600">
-              <TrendingUp className="w-3 h-3" />
+            <div className="flex items-center gap-1.5 text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded-full text-[10px]">
+              <TrendingUp className="size-3" />
               <span>{tour.trend}</span>
             </div>
           )}
           
-          {tour.isFree && (
-            <span className="font-bold text-teal flex items-center">
-              <span className="w-1 h-1 rounded-full bg-teal/30 mr-2" />
-              Free
-            </span>
+          {tour.isFree && !tour.trend && (
+            <div className="flex items-center gap-1.5 text-coral font-bold bg-coral/5 px-2 py-0.5 rounded-full text-[10px]">
+              <span>Free</span>
+            </div>
           )}
         </div>
       </div>

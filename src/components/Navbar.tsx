@@ -1,40 +1,76 @@
-import { Globe, Menu } from 'lucide-react';
+import { Globe, Menu, User } from 'lucide-react';
 
 interface NavbarProps {
   onBecomeHost: () => void;
+  onLogoClick: () => void;
+  onLiveClick: () => void;
 }
 
-export default function Navbar({ onBecomeHost }: NavbarProps) {
+export default function Navbar({ onBecomeHost, onLogoClick, onLiveClick }: NavbarProps) {
   return (
-    <nav className="flex items-center justify-between px-4 md:px-8 py-4 bg-white border-b border-gray-100 sticky top-0 z-50 shadow-sm">
-      <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-full flex items-center justify-center bg-teal">
-          <Globe className="w-5 h-5 text-white" />
-        </div>
-        <span className="font-display font-bold text-xl md:text-2xl">Lagos Rhythm</span>
-      </div>
-      
-      <div className="hidden md:flex gap-8 text-sm font-medium text-gray-600">
-        <a href="#live" className="hover:text-teal transition-colors">Live Tour</a>
-        <a href="#catalog" className="hover:text-teal transition-colors">Destinations</a>
-        <a href="#experiences" className="hover:text-teal transition-colors">Experiences</a>
+    <header className="w-full flex flex-col fixed top-0 z-50">
+      {/* Top Banner */}
+      <div className="bg-teal text-white px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-2 relative z-10 shadow-sm leading-tight transition-transform duration-300">
+        <span className="flex size-2 rounded-full bg-coral animate-pulse" />
+        <span>Born From This Ground is Live! Join the tour now.</span>
       </div>
 
-      <div className="flex items-center gap-3">
-        <button 
-          onClick={onBecomeHost} 
-          className="text-sm font-semibold px-4 py-2 rounded-full border border-gray-300 hover:bg-gray-50 transition-colors hidden sm:block"
+      {/* Main Nav */}
+      <nav className="w-full flex items-center justify-between px-4 md:px-8 py-4 border-b border-border bg-white shadow-sm transition-all duration-300">
+        <div 
+          onClick={onLogoClick}
+          className="flex items-center gap-2 cursor-pointer group hover:scale-[1.02] transition-transform"
         >
-          Become a Host
-        </button>
-        <button className="p-2 rounded-full border border-gray-200 md:hidden">
-          <Menu className="w-5 h-5 text-gray-600" />
-        </button>
-        <div className="hidden md:flex items-center gap-2 border border-gray-200 rounded-full px-2 py-1">
-          <Menu className="w-4 h-4 text-gray-500" />
-          <div className="w-6 h-6 rounded-full bg-gray-200" />
+          <div className="size-8 rounded-full bg-coral flex items-center justify-center text-white shadow-lg shadow-coral/20 group-hover:shadow-coral/40 transition-all">
+            <Globe className="size-[18px]" />
+          </div>
+          <span className="font-bold text-lg md:text-xl text-dark tracking-tight">
+            Lagos Rhythm
+          </span>
         </div>
-      </div>
-    </nav>
+        
+        <div className="hidden md:flex items-center gap-8 text-sm font-semibold text-dark">
+          <button 
+            onClick={onLiveClick}
+            className="hover:text-coral transition-colors"
+          >
+            Live Tour
+          </button>
+          <a 
+            href="#catalog" 
+            onClick={(e) => {
+              if (window.location.pathname !== '/') {
+                onLogoClick();
+              }
+            }}
+            className="hover:text-coral transition-colors"
+          >
+            Destinations
+          </a>
+          <a 
+            href="#experiences" 
+            className="hover:text-coral transition-colors"
+          >
+            Experiences
+          </a>
+        </div>
+
+        <div className="flex items-center gap-4 text-sm font-semibold">
+          <button 
+            onClick={onBecomeHost} 
+            className="hidden md:block hover:underline text-dark transition-all"
+          >
+            Become a Host
+          </button>
+          
+          <button className="flex items-center gap-3 border border-border rounded-full px-3 py-1.5 bg-white hover:shadow-md transition-all active:scale-95 group">
+            <Menu className="size-[16px] text-dark" />
+            <div className="size-8 bg-muted rounded-full overflow-hidden flex items-center justify-center group-hover:bg-gray-200 transition-colors">
+              <User className="text-muted-foreground size-[14px]" />
+            </div>
+          </button>
+        </div>
+      </nav>
+    </header>
   );
 }

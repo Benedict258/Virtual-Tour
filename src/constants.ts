@@ -23,10 +23,10 @@ export const CHAT: ChatMessage[] = [
 ];
 
 export const CATEGORY_STYLES: Record<string, string> = {
-  Culture: "bg-[#FFF0D4] text-[#B45309]",
-  Nature: "bg-[#D1FAE5] text-[#065F46]",
-  Entertainment: "bg-[#EDE9FE] text-[#5B21B6]",
-  History: "bg-[#FEE2E2] text-[#991B1B]",
-  Relaxation: "bg-[#DBEAFE] text-[#1E40AF]",
-  Modern: "bg-[#F0F9FF] text-[#0369A1]",
+  Culture: "bg-white text-dark shadow-sm border border-border/50",
+  Nature: "bg-white text-dark shadow-sm border border-border/50",
+  Entertainment: "bg-white text-dark shadow-sm border border-border/50",
+  History: "bg-white text-dark shadow-sm border border-border/50",
+  Relaxation: "bg-white text-dark shadow-sm border border-border/50",
+  Modern: "bg-white text-dark shadow-sm border border-border/50",
 };

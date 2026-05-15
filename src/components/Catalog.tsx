@@ -17,41 +17,41 @@ export default function Catalog() {
   });
 
   return (
-    <section id="catalog" className="px-4 md:px-8 py-16 bg-white/50 border-t border-gray-100">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
-        <div className="space-y-2">
-          <h2 className="text-3xl md:text-4xl font-display font-bold">Browse the Catalog</h2>
-          <p className="text-gray-500 max-w-md">Find your next destination with our powerful search and filters.</p>
+    <section id="catalog" className="px-4 md:px-8 py-16 bg-white max-w-[1440px] mx-auto border-t border-border">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-10 mb-14">
+        <div className="space-y-3 text-center md:text-left">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-dark">Browse the Catalog</h2>
+          <p className="text-muted-foreground text-sm md:text-base max-w-md">Find your next destination with our powerful search and filters.</p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
-          <div className="relative group min-w-[280px]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-teal transition-colors" />
+        <div className="flex flex-wrap items-center justify-center md:justify-end gap-4">
+          <div className="relative group min-w-[280px] sm:min-w-[320px]">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 size-4 text-muted-foreground group-focus-within:text-coral transition-colors" />
             <input 
               type="text"
               placeholder="Search destinations..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full bg-white border border-gray-200 pl-11 pr-4 py-3 rounded-xl text-sm focus:outline-none focus:ring-4 focus:ring-teal/5 focus:border-teal transition-all shadow-sm"
+              className="w-full bg-white border border-border pl-12 pr-4 py-3.5 rounded-2xl text-sm focus:outline-none focus:ring-4 focus:ring-coral/5 focus:border-coral transition-all shadow-sm font-medium"
             />
           </div>
-          <button className="flex items-center gap-2 px-5 py-3 bg-white border border-gray-200 rounded-xl text-sm font-semibold hover:border-teal hover:text-teal transition-all shadow-sm">
-            <SlidersHorizontal className="w-4 h-4" />
+          <button className="flex items-center gap-2 px-6 py-3.5 bg-white border border-border rounded-2xl text-sm font-bold hover:border-coral hover:text-coral transition-all shadow-sm active:scale-95">
+            <SlidersHorizontal className="size-4" />
             <span>Filters</span>
           </button>
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-10 pb-2 overflow-x-auto scrollbar-hide">
+      <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-12 pb-2 overflow-x-auto scrollbar-hide">
         {CATS.map(cat => (
           <button
             key={cat}
             onClick={() => setActiveCat(cat)}
             className={cn(
-              "px-6 py-2.5 rounded-full text-sm font-bold transition-all border whitespace-nowrap",
+              "px-8 py-3 rounded-full text-sm font-bold transition-all border whitespace-nowrap active:scale-95",
               activeCat === cat 
-                ? "bg-dark text-white border-dark shadow-lg shadow-dark/10" 
-                : "bg-white text-gray-500 border-gray-200 hover:border-teal hover:text-teal"
+                ? "bg-dark text-white border-dark shadow-xl shadow-dark/10" 
+                : "bg-white text-muted-foreground border-border hover:border-coral hover:text-coral"
             )}
           >
             {cat}
@@ -59,7 +59,7 @@ export default function Catalog() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-6 gap-y-10">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12">
         <AnimatePresence mode="popLayout">
           {filteredTours.map((tour) => (
             <motion.div
@@ -78,21 +78,21 @@ export default function Catalog() {
       </div>
 
       {filteredTours.length === 0 && (
-        <div className="text-center py-24">
-          <div className="text-4xl mb-4">🏝️</div>
-          <h3 className="text-xl font-bold mb-2">No destinations found</h3>
-          <p className="text-gray-500">Try adjusting your search or category filter.</p>
+        <div className="text-center py-32">
+          <div className="text-5xl mb-6">🏜️</div>
+          <h3 className="text-2xl font-bold text-dark mb-3 tracking-tight">No destinations found</h3>
+          <p className="text-muted-foreground">Try adjusting your search or category filter.</p>
           <button 
             onClick={() => { setActiveCat("All"); setSearch(""); }}
-            className="mt-6 text-teal font-bold hover:underline"
+            className="mt-8 text-coral font-bold hover:underline px-6 py-2 rounded-full hover:bg-coral/5 transition-all"
           >
             Reset all filters
           </button>
         </div>
       )}
 
-      <div className="mt-16 flex justify-center">
-        <button className="px-8 py-3 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-600 hover:border-teal hover:text-teal hover:shadow-md transition-all">
+      <div className="mt-20 flex justify-center">
+        <button className="px-12 py-4 bg-white border border-border rounded-2xl text-sm font-bold text-dark hover:border-coral hover:text-coral hover:shadow-xl transition-all active:scale-95 shadow-sm">
           Load More Tours
         </button>
       </div>
