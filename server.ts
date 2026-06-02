@@ -76,6 +76,10 @@ const publicFormLimiter = rateLimit({
 // Apply authentication middleware globally (parses tokens but does not require them)
 app.use(verifyFirebaseToken);
 
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok', environment: process.env.VERCEL ? 'vercel' : 'local', timestamp: new Date().toISOString() });
+});
+
 function jsonOk<T>(data: T) {
   return { data };
 }
