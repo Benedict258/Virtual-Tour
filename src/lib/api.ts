@@ -50,6 +50,44 @@ export async function getRecommendedTours() {
   return result.data;
 }
 
+// ============ Admin Recommended Tours ============
+
+export interface AdminRecommendedTourInput {
+  title: string;
+  host: string;
+  time: string;
+  tags: string[];
+  img: string;
+  rank: number;
+}
+
+export async function adminCreateRecommendedTour(passcode: string, data: AdminRecommendedTourInput) {
+  return request<ApiResult<{ id: string }>>('/admin/recommended-tours', {
+    method: 'POST',
+    headers: { 'X-Admin-Passcode': passcode },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function adminUpdateRecommendedTour(
+  passcode: string,
+  id: string | number,
+  data: Partial<AdminRecommendedTourInput>,
+) {
+  return request<ApiResult<{ ok: true }>>(`/admin/recommended-tours/${id}`, {
+    method: 'PUT',
+    headers: { 'X-Admin-Passcode': passcode },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function adminDeleteRecommendedTour(passcode: string, id: string | number) {
+  return request<ApiResult<{ ok: true }>>(`/admin/recommended-tours/${id}`, {
+    method: 'DELETE',
+    headers: { 'X-Admin-Passcode': passcode },
+  });
+}
+
 export async function submitTourRequest(input: RequestTourInput) {
   return request<ApiResult<{ ok: true }>>('/api/tour-requests', {
     method: 'POST',
