@@ -130,25 +130,19 @@ function sanitise(value: unknown, maxLen = 500): string {
 
 async function getTourStatus(): Promise<TourStatusSnapshot> {
   try {
-    const isLive = process.env.LIVE_TOUR_ACTIVE === 'true';
-
-    if (!isLive) {
-      return OFFLINE_TOUR_STATUS;
-    }
-
-    // Try to fetch from Firestore if available
+    // Always try Firestore first — env var is only a fallback
     try {
       const activeTour = await getActiveLiveTour();
       if (activeTour) {
         currentLiveTourId = activeTour.id;
-        
-          // Fetch stream provider metadata
-          let streamProvider = null;
-          try {
-            streamProvider = await getStreamProvider(activeTour.streamProviderId);
-          } catch (err) {
-            console.warn('Could not fetch stream provider:', err instanceof Error ? err.message : err);
-          }
+
+        // Fetch stream provider metadata
+        let streamProvider = null;
+        try {
+          streamProvider = await getStreamProvider(activeTour.streamProviderId);
+        } catch (err) {
+          console.warn('Could not fetch stream provider:', err instanceof Error ? err.message : err);
+        }
 
         return {
           isLive: true,
@@ -162,31 +156,36 @@ async function getTourStatus(): Promise<TourStatusSnapshot> {
             streamImageUrl: activeTour.metadata?.imageUrl,
             hostImageUrl: activeTour.metadata?.hostImageUrl,
           },
-            streamProvider: streamProvider ? {
-              type: streamProvider.type,
-              name: streamProvider.name,
-              config: streamProvider.config,
-            } : undefined,
+          streamProvider: streamProvider ? {
+            type: streamProvider.type,
+            name: streamProvider.name,
+            config: streamProvider.config,
+          } : undefined,
         };
       }
     } catch (error) {
       console.warn('Could not fetch from Firestore, using env vars:', error instanceof Error ? error.message : error);
     }
 
-    // Fallback to environment variables
-    return {
-      isLive: true,
-      viewerCount: Number(process.env.LIVE_TOUR_VIEWERS || 1245),
-      tour: {
-        title: process.env.LIVE_TOUR_TITLE || 'Live tour',
-        shortDescription: process.env.LIVE_TOUR_DESCRIPTION || 'A live Lagos virtual tour is currently broadcasting.',
-        hostName: process.env.LIVE_TOUR_HOST || 'Lagos Rhythm',
-        startedAtLabel: process.env.LIVE_TOUR_STARTED_LABEL || 'Live now',
-        location: process.env.LIVE_TOUR_LOCATION || 'Lagos, Nigeria',
-        streamImageUrl: process.env.LIVE_TOUR_STREAM_IMAGE,
-        hostImageUrl: process.env.LIVE_TOUR_HOST_IMAGE,
-      },
-    };
+    // Fallback to environment variables only when explicitly enabled
+    const envLive = process.env.LIVE_TOUR_ACTIVE === 'true';
+    if (envLive) {
+      return {
+        isLive: true,
+        viewerCount: Number(process.env.LIVE_TOUR_VIEWERS || 1245),
+        tour: {
+          title: process.env.LIVE_TOUR_TITLE || 'Live tour',
+          shortDescription: process.env.LIVE_TOUR_DESCRIPTION || 'A live virtual tour of Lagos is currently broadcasting.',
+          hostName: process.env.LIVE_TOUR_HOST || 'Lagos Rhythm',
+          startedAtLabel: 'Live now',
+          location: process.env.LIVE_TOUR_LOCATION || 'Lagos, Nigeria',
+          streamImageUrl: process.env.LIVE_TOUR_STREAM_IMAGE,
+          hostImageUrl: process.env.LIVE_TOUR_HOST_IMAGE,
+        },
+      };
+    }
+
+    return OFFLINE_TOUR_STATUS;
   } catch (error) {
     console.error('Error in getTourStatus:', error);
     return OFFLINE_TOUR_STATUS;

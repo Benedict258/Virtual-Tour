@@ -34,6 +34,7 @@ const mockServices = vi.hoisted(() => ({
 
 vi.mock('../../src/server/db/firestore', () => ({
   initializeFirebase: vi.fn(),
+  isFirebaseAvailable: vi.fn().mockReturnValue(true),
   getRealtimeDB: vi.fn(),
   COLLECTIONS: {
     users: 'users',
