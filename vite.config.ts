@@ -121,6 +121,7 @@ function devApiPlugin(): Plugin {
   };
 }
 
+/// <reference types="vitest/config" />
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
 
@@ -146,9 +147,58 @@ export default defineConfig(({ mode }) => {
         },
       },
     },
+    test: {
+      globals: true,
+      environment: 'jsdom',
+      setupFiles: ['./tests/setup.ts'],
+      include: ['src/**/*.{test,spec}.{ts,tsx}', 'tests/**/*.{test,spec}.{ts,tsx}'],
+      coverage: {
+        provider: 'v8',
+        reporter: ['text', 'html'],
+      },
+    },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
       watch: process.env.DISABLE_HMR === 'true' ? null : {},
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+          ws: true,
+        },
+        '/admin/streams': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+        '/admin/tours': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+        '/admin/catalog': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+        '/admin/recommended-tours': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+        '/admin/tour-requests': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+        '/admin/newsletter': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+        '/admin/analytics': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+        '/admin/logs': {
+          target: 'http://localhost:3001',
+          changeOrigin: true,
+        },
+      },
     },
   };
 });
