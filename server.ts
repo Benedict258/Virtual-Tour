@@ -428,6 +428,22 @@ app.put('/admin/tours/:id', requireAdminPasscode, requireFirebaseMiddleware, asy
   }
 });
 
+/**
+ * DELETE /admin/tours/:id
+ * Delete a live tour (requires auth)
+ */
+app.delete('/admin/tours/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const { id } = req.params;
+    const db = getRealtimeDB();
+    await db.ref(COLLECTIONS.live_tours).child(id).remove();
+    res.json(jsonOk({ ok: true }));
+  } catch (error) {
+    console.error('Error deleting live tour:', error);
+    res.status(500).json({ error: 'Failed to delete live tour' });
+  }
+});
+
 // ============ Public Catalog Endpoint ============
 
 app.get('/api/catalog', async (_req, res) => {
@@ -607,6 +623,30 @@ app.get('/admin/newsletter', requireAdminPasscode, requireFirebaseMiddleware, as
   } catch (error) {
     console.error('Error fetching subscribers:', error);
     res.status(500).json({ error: 'Failed to fetch subscribers' });
+  }
+});
+
+app.delete('/admin/newsletter/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const { id } = req.params;
+    const db = getRealtimeDB();
+    await db.ref(COLLECTIONS.newsletter_subscribers).child(id).remove();
+    res.json(jsonOk({ ok: true }));
+  } catch (error) {
+    console.error('Error deleting subscriber:', error);
+    res.status(500).json({ error: 'Failed to delete subscriber' });
+  }
+});
+
+app.delete('/admin/tour-requests/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const { id } = req.params;
+    const db = getRealtimeDB();
+    await db.ref(COLLECTIONS.tour_requests).child(id).remove();
+    res.json(jsonOk({ ok: true }));
+  } catch (error) {
+    console.error('Error deleting tour request:', error);
+    res.status(500).json({ error: 'Failed to delete tour request' });
   }
 });
 
@@ -802,15 +842,8 @@ setInterval(() => {
 const isVercel = process.env.VERCEL === '1';
 
 if (!isVercel) {
-  server.listen(port, '0.0.0.0', async () => {
+  server.listen(port, '0.0.0.0', () => {
     console.log(`Lagos Rhythm listening on http://localhost:${port}`);
-
-    // Initialize Database data (seeds recommended tours if empty)
-    try {
-      await initializeFirestoreData();
-    } catch (error) {
-      console.warn('Failed to initialize Database data:', error instanceof Error ? error.message : error);
-    }
   });
 }
 
