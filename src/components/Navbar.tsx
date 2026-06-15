@@ -6,15 +6,16 @@ interface NavbarProps {
   onCatalogClick: () => void;
   onRequestTour: () => void;
   isLive: boolean;
+  liveTourTitle?: string;
 }
 
-export default function Navbar({ onLogoClick, onLiveClick, onCatalogClick, onRequestTour, isLive }: NavbarProps) {
+export default function Navbar({ onLogoClick, onLiveClick, onCatalogClick, onRequestTour, isLive, liveTourTitle }: NavbarProps) {
   return (
     <header className="w-full flex flex-col fixed top-0 z-50">
       {isLive && (
         <div className="bg-teal text-white px-4 py-2 text-center text-sm font-medium flex items-center justify-center gap-2 relative z-10 shadow-sm leading-tight transition-transform duration-300">
           <span className="flex size-2 rounded-full bg-coral animate-pulse" />
-          <span>Born from this ground is live</span>
+          <span>{liveTourTitle || 'Live tour'} is live</span>
         </div>
       )}
 
