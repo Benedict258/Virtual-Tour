@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { Duplex } from 'node:stream';
@@ -9,7 +10,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import { OFFLINE_TOUR_STATUS, type TourStatusSnapshot } from './src/data/liveTour';
 import { RECOMMENDED_TOURS } from './src/data/recommendedTours';
-import { initializeFirebase, getRealtimeDB, COLLECTIONS } from './src/server/db/firestore';
+import { initializeFirebase, getRealtimeDB, COLLECTIONS, isFirebaseAvailable } from './src/server/db/firestore';
 import {
   createTourRequest,
   addNewsletterSubscriber,
@@ -101,6 +102,14 @@ function requireAdminPasscode(req: express.Request, res: express.Response, next:
   next();
 }
 
+function requireFirebaseMiddleware(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (!isFirebaseAvailable()) {
+    res.status(503).json({ error: 'Database not configured. Add the Firebase service account file to the project root.' });
+    return;
+  }
+  next();
+}
+
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', environment: process.env.VERCEL ? 'vercel' : 'local', timestamp: new Date().toISOString() });
 });
@@ -121,25 +130,19 @@ function sanitise(value: unknown, maxLen = 500): string {
 
 async function getTourStatus(): Promise<TourStatusSnapshot> {
   try {
-    const isLive = process.env.LIVE_TOUR_ACTIVE === 'true';
-
-    if (!isLive) {
-      return OFFLINE_TOUR_STATUS;
-    }
-
-    // Try to fetch from Firestore if available
+    // Always try Firestore first — env var is only a fallback
     try {
       const activeTour = await getActiveLiveTour();
       if (activeTour) {
         currentLiveTourId = activeTour.id;
-        
-          // Fetch stream provider metadata
-          let streamProvider = null;
-          try {
-            streamProvider = await getStreamProvider(activeTour.streamProviderId);
-          } catch (err) {
-            console.warn('Could not fetch stream provider:', err instanceof Error ? err.message : err);
-          }
+
+        // Fetch stream provider metadata
+        let streamProvider = null;
+        try {
+          streamProvider = await getStreamProvider(activeTour.streamProviderId);
+        } catch (err) {
+          console.warn('Could not fetch stream provider:', err instanceof Error ? err.message : err);
+        }
 
         return {
           isLive: true,
@@ -153,31 +156,36 @@ async function getTourStatus(): Promise<TourStatusSnapshot> {
             streamImageUrl: activeTour.metadata?.imageUrl,
             hostImageUrl: activeTour.metadata?.hostImageUrl,
           },
-            streamProvider: streamProvider ? {
-              type: streamProvider.type,
-              name: streamProvider.name,
-              config: streamProvider.config,
-            } : undefined,
+          streamProvider: streamProvider ? {
+            type: streamProvider.type,
+            name: streamProvider.name,
+            config: streamProvider.config,
+          } : undefined,
         };
       }
     } catch (error) {
       console.warn('Could not fetch from Firestore, using env vars:', error instanceof Error ? error.message : error);
     }
 
-    // Fallback to environment variables
-    return {
-      isLive: true,
-      viewerCount: Number(process.env.LIVE_TOUR_VIEWERS || 1245),
-      tour: {
-        title: process.env.LIVE_TOUR_TITLE || 'Live tour',
-        shortDescription: process.env.LIVE_TOUR_DESCRIPTION || 'A live Lagos virtual tour is currently broadcasting.',
-        hostName: process.env.LIVE_TOUR_HOST || 'Lagos Rhythm',
-        startedAtLabel: process.env.LIVE_TOUR_STARTED_LABEL || 'Live now',
-        location: process.env.LIVE_TOUR_LOCATION || 'Lagos, Nigeria',
-        streamImageUrl: process.env.LIVE_TOUR_STREAM_IMAGE,
-        hostImageUrl: process.env.LIVE_TOUR_HOST_IMAGE,
-      },
-    };
+    // Fallback to environment variables only when explicitly enabled
+    const envLive = process.env.LIVE_TOUR_ACTIVE === 'true';
+    if (envLive) {
+      return {
+        isLive: true,
+        viewerCount: Number(process.env.LIVE_TOUR_VIEWERS || 1245),
+        tour: {
+          title: process.env.LIVE_TOUR_TITLE || 'Live tour',
+          shortDescription: process.env.LIVE_TOUR_DESCRIPTION || 'A live virtual tour of Lagos is currently broadcasting.',
+          hostName: process.env.LIVE_TOUR_HOST || 'Lagos Rhythm',
+          startedAtLabel: 'Live now',
+          location: process.env.LIVE_TOUR_LOCATION || 'Lagos, Nigeria',
+          streamImageUrl: process.env.LIVE_TOUR_STREAM_IMAGE,
+          hostImageUrl: process.env.LIVE_TOUR_HOST_IMAGE,
+        },
+      };
+    }
+
+    return OFFLINE_TOUR_STATUS;
   } catch (error) {
     console.error('Error in getTourStatus:', error);
     return OFFLINE_TOUR_STATUS;
@@ -196,7 +204,7 @@ app.get('/api/health', (_req, res) => {
  * Request body: { type, name, config }
  * Response: { data: StreamProvider }
  */
-app.post('/admin/streams', requireAdminPasscode, async (req: express.Request, res) => {
+app.post('/admin/streams', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
   try {
     const { type, name, config } = req.body;
 
@@ -228,7 +236,7 @@ app.post('/admin/streams', requireAdminPasscode, async (req: express.Request, re
  * List all stream providers (requires admin role)
  * Response: { data: StreamProvider[] }
  */
-app.get('/admin/streams', requireAdminPasscode, async (_req: express.Request, res) => {
+app.get('/admin/streams', requireAdminPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
   try {
     const providers = await getStreamProviders();
     res.json(jsonOk(providers));
@@ -244,7 +252,7 @@ app.get('/admin/streams', requireAdminPasscode, async (_req: express.Request, re
  * Request body: { type?, name?, config? }
  * Response: { data: { ok: true } }
  */
-app.put('/admin/streams/:id', requireAdminPasscode, async (req: express.Request, res) => {
+app.put('/admin/streams/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
   try {
     const { id } = req.params;
     const { type, name, config } = req.body;
@@ -283,7 +291,7 @@ app.put('/admin/streams/:id', requireAdminPasscode, async (req: express.Request,
  * Delete a stream provider (requires admin role)
  * Response: { data: { ok: true } }
  */
-app.delete('/admin/streams/:id', requireAdminPasscode, async (_req: express.Request, res) => {
+app.delete('/admin/streams/:id', requireAdminPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
   try {
     const { id } = _req.params;
 
@@ -309,7 +317,7 @@ app.delete('/admin/streams/:id', requireAdminPasscode, async (_req: express.Requ
  * Request body: { streamProviderId, title, shortDescription, hostName, location, metadata? }
  * Response: { data: LiveTour }
  */
-app.post('/admin/tours', requireAdminPasscode, async (req: express.Request, res) => {
+app.post('/admin/tours', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
   try {
     const { streamProviderId, title, shortDescription, hostName, location, metadata } = req.body;
 
@@ -353,7 +361,7 @@ app.post('/admin/tours', requireAdminPasscode, async (req: express.Request, res)
  * List live tour history (requires auth)
  * Response: { data: LiveTour[] }
  */
-app.get('/admin/tours', requireAdminPasscode, async (_req: express.Request, res) => {
+app.get('/admin/tours', requireAdminPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
   try {
     const tours = await getLiveTourHistory(100);
     res.json(jsonOk(tours));
@@ -369,7 +377,7 @@ app.get('/admin/tours', requireAdminPasscode, async (_req: express.Request, res)
  * Request body: { title?, shortDescription?, hostName?, location?, status?, metadata? }
  * Response: { data: { ok: true } }
  */
-app.put('/admin/tours/:id', requireAdminPasscode, async (_req: express.Request, res) => {
+app.put('/admin/tours/:id', requireAdminPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
   try {
     const { id } = _req.params;
     const { title, shortDescription, hostName, location, status, metadata } = _req.body;
@@ -420,6 +428,22 @@ app.put('/admin/tours/:id', requireAdminPasscode, async (_req: express.Request, 
   }
 });
 
+/**
+ * DELETE /admin/tours/:id
+ * Delete a live tour (requires auth)
+ */
+app.delete('/admin/tours/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const { id } = req.params;
+    const db = getRealtimeDB();
+    await db.ref(COLLECTIONS.live_tours).child(id).remove();
+    res.json(jsonOk({ ok: true }));
+  } catch (error) {
+    console.error('Error deleting live tour:', error);
+    res.status(500).json({ error: 'Failed to delete live tour' });
+  }
+});
+
 // ============ Public Catalog Endpoint ============
 
 app.get('/api/catalog', async (_req, res) => {
@@ -434,7 +458,7 @@ app.get('/api/catalog', async (_req, res) => {
 
 // ============ Admin Catalog Endpoints ============
 
-app.get('/admin/catalog', requireAdminPasscode, async (_req: express.Request, res) => {
+app.get('/admin/catalog', requireAdminPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
   try {
     const db = getRealtimeDB();
     const snapshot = await db.ref(COLLECTIONS.catalog_tours).get();
@@ -448,7 +472,7 @@ app.get('/admin/catalog', requireAdminPasscode, async (_req: express.Request, re
   }
 });
 
-app.post('/admin/catalog', requireAdminPasscode, async (req: express.Request, res) => {
+app.post('/admin/catalog', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
   try {
     const { title, category, duration, description, imageUrl, free, views, trend, visibility } = req.body;
     if (!title || typeof title !== 'string') {
@@ -473,7 +497,7 @@ app.post('/admin/catalog', requireAdminPasscode, async (req: express.Request, re
   }
 });
 
-app.put('/admin/catalog/:id', requireAdminPasscode, async (req: express.Request, res) => {
+app.put('/admin/catalog/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
   try {
     const { id } = req.params;
     await updateCatalogTour(id, req.body);
@@ -484,7 +508,7 @@ app.put('/admin/catalog/:id', requireAdminPasscode, async (req: express.Request,
   }
 });
 
-app.delete('/admin/catalog/:id', requireAdminPasscode, async (req: express.Request, res) => {
+app.delete('/admin/catalog/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
   try {
     const { id } = req.params;
     await deleteCatalogTour(id);
@@ -497,7 +521,7 @@ app.delete('/admin/catalog/:id', requireAdminPasscode, async (req: express.Reque
 
 // ============ Admin Recommended Tours Endpoints ============
 
-app.post('/admin/recommended-tours', requireAdminPasscode, async (req: express.Request, res) => {
+app.post('/admin/recommended-tours', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
   try {
     const { title, host, time, tags, img, rank } = req.body;
     if (!title || typeof title !== 'string') {
@@ -515,7 +539,7 @@ app.post('/admin/recommended-tours', requireAdminPasscode, async (req: express.R
   }
 });
 
-app.put('/admin/recommended-tours/:id', requireAdminPasscode, async (req: express.Request, res) => {
+app.put('/admin/recommended-tours/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
   try {
     const { id } = req.params;
     const { updateRecommendedTour } = await import('./src/server/db/services');
@@ -527,7 +551,7 @@ app.put('/admin/recommended-tours/:id', requireAdminPasscode, async (req: expres
   }
 });
 
-app.delete('/admin/recommended-tours/:id', requireAdminPasscode, async (req: express.Request, res) => {
+app.delete('/admin/recommended-tours/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
   try {
     const { id } = req.params;
     const { deleteRecommendedTour } = await import('./src/server/db/services');
@@ -541,7 +565,7 @@ app.delete('/admin/recommended-tours/:id', requireAdminPasscode, async (req: exp
 
 // ============ Admin Analytics & Logs Endpoints ============
 
-app.get('/admin/analytics', requireAdminPasscode, async (req: express.Request, res) => {
+app.get('/admin/analytics', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
   try {
     const summary = await getAnalyticsSummary();
     res.json(jsonOk(summary));
@@ -551,7 +575,7 @@ app.get('/admin/analytics', requireAdminPasscode, async (req: express.Request, r
   }
 });
 
-app.get('/admin/logs', requireAdminPasscode, async (_req: express.Request, res) => {
+app.get('/admin/logs', requireAdminPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
   try {
     const logs = await getOperationLogs(200);
     res.json(jsonOk(logs));
@@ -563,7 +587,7 @@ app.get('/admin/logs', requireAdminPasscode, async (_req: express.Request, res) 
 
 // ============ Admin Tour Requests + Newsletter Endpoints ============
 
-app.get('/admin/tour-requests', requireAdminPasscode, async (_req: express.Request, res) => {
+app.get('/admin/tour-requests', requireAdminPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
   try {
     const { getTourRequests } = await import('./src/server/db/services');
     const requests = await getTourRequests(200);
@@ -574,7 +598,7 @@ app.get('/admin/tour-requests', requireAdminPasscode, async (_req: express.Reque
   }
 });
 
-app.put('/admin/tour-requests/:id', requireAdminPasscode, async (req: express.Request, res) => {
+app.put('/admin/tour-requests/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -591,7 +615,7 @@ app.put('/admin/tour-requests/:id', requireAdminPasscode, async (req: express.Re
   }
 });
 
-app.get('/admin/newsletter', requireAdminPasscode, async (_req: express.Request, res) => {
+app.get('/admin/newsletter', requireAdminPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
   try {
     const { getNewsletterSubscribers } = await import('./src/server/db/services');
     const subscribers = await getNewsletterSubscribers(1000);
@@ -599,6 +623,30 @@ app.get('/admin/newsletter', requireAdminPasscode, async (_req: express.Request,
   } catch (error) {
     console.error('Error fetching subscribers:', error);
     res.status(500).json({ error: 'Failed to fetch subscribers' });
+  }
+});
+
+app.delete('/admin/newsletter/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const { id } = req.params;
+    const db = getRealtimeDB();
+    await db.ref(COLLECTIONS.newsletter_subscribers).child(id).remove();
+    res.json(jsonOk({ ok: true }));
+  } catch (error) {
+    console.error('Error deleting subscriber:', error);
+    res.status(500).json({ error: 'Failed to delete subscriber' });
+  }
+});
+
+app.delete('/admin/tour-requests/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const { id } = req.params;
+    const db = getRealtimeDB();
+    await db.ref(COLLECTIONS.tour_requests).child(id).remove();
+    res.json(jsonOk({ ok: true }));
+  } catch (error) {
+    console.error('Error deleting tour request:', error);
+    res.status(500).json({ error: 'Failed to delete tour request' });
   }
 });
 
@@ -688,10 +736,17 @@ app.post('/api/newsletter', publicFormLimiter, async (req, res) => {
   }
 });
 
-app.use(express.static(path.join(__dirname, 'dist')));
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
+const distPath = path.join(__dirname, 'dist');
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+} else {
+  app.get('*', (_req, res) => {
+    res.status(404).json({ error: 'Build not found. Run `npm run build` first.' });
+  });
+}
 
 const server = http.createServer(app);
 
@@ -787,15 +842,8 @@ setInterval(() => {
 const isVercel = process.env.VERCEL === '1';
 
 if (!isVercel) {
-  app.listen(port, '0.0.0.0', async () => {
+  server.listen(port, '0.0.0.0', () => {
     console.log(`Lagos Rhythm listening on http://localhost:${port}`);
-
-    // Initialize Database data (seeds recommended tours if empty)
-    try {
-      await initializeFirestoreData();
-    } catch (error) {
-      console.warn('Failed to initialize Database data:', error instanceof Error ? error.message : error);
-    }
   });
 }
 

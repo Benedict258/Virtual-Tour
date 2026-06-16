@@ -55,6 +55,7 @@ export default function App() {
         onCatalogClick={navigateToCatalog}
         onRequestTour={() => setIsRequestTourOpen(true)}
         isLive={tourStatus.isLive}
+        liveTourTitle={tourStatus.tour?.title}
       />
 
       <div className={cn(tourStatus.isLive ? 'pt-[96px] md:pt-[101px]' : 'pt-[64px] md:pt-[69px]')}>

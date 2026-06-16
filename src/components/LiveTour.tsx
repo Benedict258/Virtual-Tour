@@ -1,4 +1,4 @@
-import { Bell, Clock, Info, Maximize, Pause, Pin, Send, Settings, Share2, Users, Radio } from 'lucide-react';
+import { Bell, Clock, Info, Pin, Send, Users, Radio, Share2 } from 'lucide-react';
 import { motion } from 'motion/react';
 import { useEffect, useRef } from 'react';
 import { CHAT } from '../constants';
@@ -184,9 +184,6 @@ export default function LiveTour({ status }: LiveTourProps) {
                       <Users className="size-3 md:size-4" />
                       {formatViewerCount(viewerCount)}
                     </span>
-                    <button className="bg-black/40 backdrop-blur-md size-7 md:size-9 flex items-center justify-center rounded-full text-white hover:bg-black/60 transition-colors shadow-lg border border-white/10">
-                      <Share2 className="size-3.5 md:size-4" />
-                    </button>
                   </div>
 
                   {tour.hostImageUrl && (
@@ -203,16 +200,15 @@ export default function LiveTour({ status }: LiveTourProps) {
                   </div>
 
                   <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8 flex items-center gap-3">
-                    <div className="hidden sm:flex gap-2 p-1.5 bg-black/30 backdrop-blur-md rounded-full border border-white/10">
-                      <Pause className="size-3.5 text-white cursor-pointer" />
-                      <div className="w-12 md:w-20 h-1 bg-white/20 rounded-full mt-1.5 relative overflow-hidden">
-                        <div className="absolute inset-0 bg-white w-1/2" />
-                      </div>
-                    </div>
-                    <div className="flex gap-2.5">
-                      <Settings className="size-4 md:size-5 text-white opacity-80 hover:opacity-100 cursor-pointer drop-shadow-lg" />
-                      <Maximize className="size-4 md:size-5 text-white opacity-80 hover:opacity-100 cursor-pointer drop-shadow-lg" />
-                    </div>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(window.location.href);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-md rounded-full text-white text-[10px] md:text-xs font-bold hover:bg-black/60 transition-colors shadow-lg border border-white/10"
+                    >
+                      <Share2 className="size-3.5 md:size-4" />
+                      Share
+                    </button>
                   </div>
                 </>
               )}

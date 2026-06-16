@@ -13,7 +13,7 @@ export interface NewsletterInput {
   email: string;
 }
 
-const API_BASE = import.meta.env.DEV ? 'http://localhost:3001' : '';
+const API_BASE = '';
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const url = path.startsWith('/admin') ? `${API_BASE}${path}` : path;

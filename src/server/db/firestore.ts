@@ -8,6 +8,11 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const projectRoot = path.resolve(__dirname, '../../..');
 
 let rtdb: Database | null = null;
+let firebaseAvailable = false;
+
+export function isFirebaseAvailable(): boolean {
+  return firebaseAvailable;
+}
 
 export function initializeFirebase() {
   if (rtdb) {
@@ -47,6 +52,7 @@ export function initializeFirebase() {
     }
 
     rtdb = getDatabase();
+    firebaseAvailable = true;
 
     console.log('✓ Firebase Realtime Database initialized successfully');
     return { rtdb };
