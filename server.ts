@@ -66,11 +66,16 @@ app.use(helmet({
 }));
 app.use(express.json({ limit: '32kb' }));
 
-// CORS for local dev (frontend on any localhost port → API on :3001)
+// CORS for local dev and production (frontend on any port → API on :3001)
 if (!process.env.VERCEL) {
   app.use((req, res, next) => {
     const origin = req.headers.origin;
-    if (origin && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+    const allowedOrigins = [
+      /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
+      /^https?:\/\/.*\.vercel\.app$/,
+      /^https?:\/\/152\.67\.149\.134(:\d+)?$/,
+    ];
+    if (origin && allowedOrigins.some(re => re.test(origin))) {
       res.header('Access-Control-Allow-Origin', origin);
       res.header('Vary', 'Origin');
     }
@@ -820,24 +825,29 @@ server.on('upgrade', (req, socket) => {
   socket.on('error', () => sockets.delete(socket));
 });
 
-setInterval(() => {
-  sockets.forEach((socket) => {
-    sendStatus(socket).catch((error) => {
-      console.error('Error sending status to socket:', error);
+// Broadcast status to WebSocket clients every 5s (only on persistent servers)
+if (!process.env.VERCEL) {
+  setInterval(() => {
+    sockets.forEach((socket) => {
+      sendStatus(socket).catch((error) => {
+        console.error('Error sending status to socket:', error);
+      });
     });
-  });
-}, 5000).unref();
+  }, 5000).unref();
+}
 
-// Write viewer snapshot every 30s when a live tour is active
-setInterval(() => {
-  if (currentLiveTourId) {
-    getTourStatus().then(status => {
-      if (status.isLive && currentLiveTourId) {
-        void writeViewerSnapshot(currentLiveTourId, status.viewerCount);
-      }
-    }).catch(() => {});
-  }
-}, 30_000).unref();
+// Write viewer snapshot every 30s when a live tour is active (only on persistent servers)
+if (!process.env.VERCEL) {
+  setInterval(() => {
+    if (currentLiveTourId) {
+      getTourStatus().then(status => {
+        if (status.isLive && currentLiveTourId) {
+          void writeViewerSnapshot(currentLiveTourId, status.viewerCount);
+        }
+      }).catch(() => {});
+    }
+  }, 30_000).unref();
+}
 
 const isVercel = process.env.VERCEL === '1';
 
