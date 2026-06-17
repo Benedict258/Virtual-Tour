@@ -1,2 +1,5 @@
-import app from './server';
-export default app;
+export default function handler(req: Request) {
+  return new Response(JSON.stringify({ ok: true }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
