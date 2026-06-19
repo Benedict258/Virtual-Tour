@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: lagos-rhythm-api
+    runtime: node
+    plan: free
+    buildCommand: npm install && npm run build:backend
+    startCommand: npm run start:backend
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 3001
+      - key: FIREBASE_SERVICE_ACCOUNT_KEY
+        sync: false
+      - key: VITE_ADMIN_PASSCODE
+        sync: false
+      - key: LIVE_TOUR_ACTIVE
+        value: false
+      - key: LIVE_TOUR_TITLE
+        value: Lagos Rhythm Live
+      - key: LIVE_TOUR_DESCRIPTION
+        value: A live virtual tour of Lagos is currently broadcasting.
+      - key: LIVE_TOUR_HOST
+        value: Lagos Rhythm
+      - key: LIVE_TOUR_LOCATION
+        value: Lagos, Nigeria
+      - key: LIVE_TOUR_VIEWERS
+        value: 1245
+    healthCheckPath: /api/health
+    autoDeploy: true

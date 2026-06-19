@@ -204,7 +204,7 @@ export default function LiveTour({ status }: LiveTourProps) {
                       onClick={() => {
                         navigator.clipboard.writeText(window.location.href);
                       }}
-                      className="flex items-center gap-2 px-4 py-2 bg-black/40 backdrop-blur-md rounded-full text-white text-[10px] md:text-xs font-bold hover:bg-black/60 transition-colors shadow-lg border border-white/10"
+                      className="flex items-center gap-2 px-4 py-2.5 sm:py-2 bg-black/40 backdrop-blur-md rounded-full text-white text-[10px] md:text-xs font-bold hover:bg-black/60 transition-colors shadow-lg border border-white/10 min-h-[44px]"
                     >
                       <Share2 className="size-3.5 md:size-4" />
                       Share
@@ -273,8 +273,8 @@ export default function LiveTour({ status }: LiveTourProps) {
           </div>
 
           {isLive ? (
-            <aside className="w-full lg:w-[400px] flex flex-col h-[500px] lg:h-[calc(100vh-160px)] min-h-[450px] bg-white border border-border rounded-2xl shadow-sm overflow-hidden sticky top-[140px]">
-              <div className="p-4 border-b border-border flex items-center justify-between bg-white/80 backdrop-blur-md">
+            <aside className="w-full lg:w-[400px] flex flex-col h-[400px] sm:h-[500px] lg:h-[calc(100vh-160px)] min-h-[350px] sm:min-h-[450px] bg-white border border-border rounded-2xl shadow-sm overflow-hidden sticky top-[140px]">
+              <div className="p-3 sm:p-4 border-b border-border flex items-center justify-between bg-white/80 backdrop-blur-md">
                 <div className="flex flex-col gap-0.5">
                   <span className="font-bold text-xs text-dark uppercase tracking-widest">Story Pot</span>
                   <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1.5 uppercase opacity-70">

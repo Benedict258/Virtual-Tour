@@ -63,6 +63,7 @@ if (!process.env.VERCEL) {
       /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/,
       /^https?:\/\/.*\.vercel\.app$/,
       /^https?:\/\/152\.67\.149\.134(:\d+)?$/,
+      /^https?:\/\/.*\.onrender\.com$/,
     ];
     if (origin && allowedOrigins.some(re => re.test(origin))) {
       res.header('Access-Control-Allow-Origin', origin);

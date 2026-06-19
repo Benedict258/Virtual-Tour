@@ -38,7 +38,7 @@ export default function BecomeHostModal({ isOpen, onClose }: BecomeHostModalProp
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-2xl"
+            className="relative w-full max-w-2xl bg-white rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] sm:max-h-[85vh]"
           >
             <button 
               onClick={onClose}
@@ -48,8 +48,8 @@ export default function BecomeHostModal({ isOpen, onClose }: BecomeHostModalProp
             </button>
 
             <div className="flex flex-col md:flex-row h-full">
-              {/* Sidebar */}
-              <div className="w-full md:w-64 bg-teal p-8 text-white">
+              {/* Sidebar - hidden on mobile, visible on md+ */}
+              <div className="hidden md:block w-64 bg-teal p-8 text-white shrink-0">
                 <div className="flex items-center gap-2 mb-12">
                   <Globe className="w-6 h-6" />
                   <span className="font-display font-bold text-lg">Lagos Rhythm</span>
@@ -76,12 +76,25 @@ export default function BecomeHostModal({ isOpen, onClose }: BecomeHostModalProp
                 </div>
               </div>
 
+              {/* Mobile step indicator */}
+              <div className="md:hidden bg-teal p-4 text-white">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="font-display font-bold text-sm">Lagos Rhythm</span>
+                  <span className="text-xs font-bold uppercase tracking-wider">Step {step} of 3</span>
+                </div>
+                <div className="flex gap-2">
+                  {[1, 2, 3].map(s => (
+                    <div key={s} className={`h-1.5 flex-1 rounded-full ${step >= s ? 'bg-white' : 'bg-teal-400'}`} />
+                  ))}
+                </div>
+              </div>
+
               {/* Form Content */}
-              <div className="flex-1 p-8 md:p-12 overflow-y-auto max-h-[80vh]">
+              <div className="flex-1 p-6 sm:p-8 md:p-12 overflow-y-auto max-h-[70vh] sm:max-h-[80vh]">
                 {step === 1 && (
                   <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-6">
                     <h4 className="text-xl font-bold font-display">Let's start with the basics.</h4>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">First Name</label>
                         <div className="relative">

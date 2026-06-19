@@ -21,7 +21,7 @@ export default function RecommendationSection() {
           <p className="text-sm md:text-base text-muted-foreground">Explore our growing library of immersive virtual experiences anytime, anywhere.</p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="hidden sm:flex gap-2">
           <button
             onClick={() => scroll('left')}
             className="size-10 rounded-full border border-border flex items-center justify-center hover:bg-muted text-dark transition-colors active:scale-90"
@@ -39,7 +39,7 @@ export default function RecommendationSection() {
 
       <div
         ref={scrollRef}
-        className="flex gap-6 overflow-x-auto scrollbar-hide pb-6 -mx-4 px-4 md:mx-0 md:px-0 snap-x"
+        className="flex gap-4 sm:gap-6 overflow-x-auto scrollbar-hide pb-6 -mx-4 px-4 md:mx-0 md:px-0 snap-x touch-pan-x"
       >
         {tours.map(tour => (
           <TourCard key={String(tour.id)} tour={tour} variant="compact" />
