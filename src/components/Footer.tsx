@@ -19,8 +19,8 @@ function WhatsAppIcon({ className }: { className?: string }) {
 
 export default function Footer() {
   return (
-    <footer className="w-full border-t border-border bg-white py-12 px-4 md:px-8">
-      <div className="max-w-[1440px] mx-auto flex flex-col md:flex-row items-center justify-between gap-8">
+    <footer className="w-full border-t border-border bg-white py-8 md:py-12 px-4 md:px-8">
+      <div className="max-w-[1440px] mx-auto flex flex-col items-center gap-6 md:flex-row md:justify-between md:gap-8">
         <div className="flex items-center gap-2">
           <div className="size-8 rounded-full bg-coral flex items-center justify-center text-white shadow-lg shadow-coral/20">
             <Globe className="size-[18px]" />
@@ -30,7 +30,7 @@ export default function Footer() {
           </span>
         </div>
 
-        <div className="flex gap-4">
+        <div className="flex flex-wrap justify-center gap-3">
           {[
             { Icon: Instagram, href: SOCIAL_LINKS.instagram, color: 'hover:bg-pink-500' },
             { Icon: Facebook, href: SOCIAL_LINKS.facebook, color: 'hover:bg-blue-600' },
@@ -50,13 +50,13 @@ export default function Footer() {
           ))}
         </div>
 
-        <div className="flex gap-8 text-sm font-semibold text-muted-foreground">
+        <div className="flex flex-wrap justify-center gap-4 md:gap-8 text-sm font-semibold text-muted-foreground">
           {['About', 'Terms', 'Privacy', 'Contact'].map(link => (
             <a key={link} href="#" className="hover:text-coral transition-colors">{link}</a>
           ))}
         </div>
 
-        <p className="text-muted-foreground text-sm font-medium">
+        <p className="text-muted-foreground text-xs md:text-sm font-medium">
           (c) 2024 Lagos Rhythm. All rights reserved.
         </p>
       </div>

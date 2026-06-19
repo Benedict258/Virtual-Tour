@@ -66,7 +66,7 @@ export default function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
             initial={{ opacity: 0, scale: 0.95, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-lg bg-white rounded-3xl overflow-hidden shadow-2xl"
+            className="relative w-full max-w-lg bg-white rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] overflow-y-auto"
           >
             {/* Close Button */}
             <button
@@ -77,7 +77,7 @@ export default function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
             </button>
 
             {/* Top Branding Section */}
-            <div className="bg-coral/5 p-8 flex flex-col items-center text-center border-b border-gray-100 relative overflow-hidden">
+            <div className="bg-coral/5 p-6 sm:p-8 flex flex-col items-center text-center border-b border-gray-100 relative overflow-hidden">
               <div className="absolute inset-0 bg-gradient-to-br from-coral/10 to-transparent pointer-events-none" />
               
               <motion.div 
@@ -97,7 +97,7 @@ export default function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
             </div>
 
             {/* Subscription Flow */}
-            <div className="p-8 space-y-8">
+            <div className="p-6 sm:p-8 space-y-6 sm:space-y-8">
               <form onSubmit={handleSubscribe} className="space-y-4">
                 <label className="text-sm font-bold text-gray-700 block ml-1">
                   Get weekly tour recommendations
@@ -155,7 +155,7 @@ export default function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
                   </span>
                 </div>
 
-                <div className="flex justify-center gap-4">
+                <div className="flex justify-center gap-3 sm:gap-4">
                   {[
                     { Icon: Instagram, href: SOCIAL_LINKS.instagram, color: 'hover:bg-pink-500' },
                     { Icon: Facebook, href: SOCIAL_LINKS.facebook, color: 'hover:bg-blue-600' },
@@ -170,11 +170,11 @@ export default function WelcomeModal({ isOpen, onClose }: WelcomeModalProps) {
                       target="_blank"
                       rel="noopener noreferrer"
                       className={cn(
-                        "size-12 rounded-full bg-cream border border-gray-100 flex items-center justify-center text-dark transition-all shadow-sm hover:text-white",
+                        "size-10 sm:size-12 rounded-full bg-cream border border-gray-100 flex items-center justify-center text-dark transition-all shadow-sm hover:text-white",
                         color
                       )}
                     >
-                      <Icon className="w-5 h-5" />
+                      <Icon className="w-4 h-4 sm:w-5 sm:h-5" />
                     </motion.a>
                   ))}
                 </div>

@@ -56,7 +56,7 @@ export default function RequestTourModal({ isOpen, onClose }: RequestTourModalPr
             initial={{ opacity: 0, scale: 0.95, y: 18 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 18 }}
-            className="relative w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl"
+            className="relative w-full max-w-lg rounded-3xl bg-white p-6 sm:p-8 shadow-2xl max-h-[90vh] overflow-y-auto"
           >
             <button
               type="button"

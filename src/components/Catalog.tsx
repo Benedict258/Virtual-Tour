@@ -72,7 +72,7 @@ export default function Catalog() {
       )}
 
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-x-8 sm:gap-y-12">
           {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
             <div key={i} className="rounded-2xl border border-border overflow-hidden">
               <div className="aspect-video animate-pulse bg-muted" />
@@ -84,7 +84,7 @@ export default function Catalog() {
           ))}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 sm:gap-x-8 sm:gap-y-12">
           <AnimatePresence mode="popLayout">
             {filtered.map(tour => (
               <motion.div
