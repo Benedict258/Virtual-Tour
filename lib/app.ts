@@ -26,8 +26,14 @@ import {
   writeViewerSnapshot,
   getAnalyticsSummary,
   createHostApplication,
+  getHostApplication,
+  getHostApplications,
+  updateHostApplicationStatus,
+  createHost,
+  getHostByEmail,
+  getHosts,
 } from '../src/server/db/services';
-import type { StreamProvider, LiveTour } from '../src/server/db/types';
+import type { StreamProvider, LiveTour, HostApplication } from '../src/server/db/types';
 
 const app = express();
 
@@ -70,7 +76,7 @@ if (!process.env.VERCEL) {
       res.header('Access-Control-Allow-Origin', origin);
       res.header('Vary', 'Origin');
     }
-    res.header('Access-Control-Allow-Headers', 'X-Admin-Passcode, Content-Type');
+    res.header('Access-Control-Allow-Headers', 'X-Admin-Passcode, X-Host-Passcode, Content-Type');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     if (req.method === 'OPTIONS') { res.sendStatus(204); return; }
     next();
@@ -104,6 +110,35 @@ function requireFirebaseMiddleware(req: express.Request, res: express.Response, 
     return;
   }
   next();
+}
+
+async function requireHostPasscode(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const passcode = req.headers['x-host-passcode'];
+  if (!passcode || typeof passcode !== 'string') {
+    res.status(401).json({ error: 'Invalid or missing host passcode.' });
+    return;
+  }
+  try {
+    const hosts = await getHosts();
+    const host = hosts.find(h => h.passcode === passcode && h.status === 'active');
+    if (!host) {
+      res.status(401).json({ error: 'Invalid host passcode.' });
+      return;
+    }
+    (req as any).hostData = host;
+    next();
+  } catch {
+    res.status(500).json({ error: 'Failed to verify host passcode.' });
+  }
+}
+
+async function requireHostOrAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const adminPasscode = req.headers['x-admin-passcode'];
+  if (adminPasscode && adminPasscode === ADMIN_PASSCODE) {
+    next();
+    return;
+  }
+  await requireHostPasscode(req, res, next);
 }
 
 app.get('/api/health', (_req, res) => {
@@ -594,6 +629,104 @@ app.delete('/admin/tour-requests/:id', requireAdminPasscode, requireFirebaseMidd
   } catch (error) {
     console.error('Error deleting tour request:', error);
     res.status(500).json({ error: 'Failed to delete tour request' });
+  }
+});
+
+// ============ Host Auth Endpoints ============
+
+app.post('/api/auth/host-login', requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const email = sanitise(req.body?.email, 254).toLowerCase();
+    const passcode = sanitise(req.body?.passcode, 100);
+
+    if (!isEmail(email)) {
+      res.status(400).json({ error: 'Enter a valid email address.' });
+      return;
+    }
+
+    if (!passcode) {
+      res.status(400).json({ error: 'Passcode is required.' });
+      return;
+    }
+
+    try {
+      const host = await getHostByEmail(email);
+      if (!host || host.passcode !== passcode || host.status !== 'active') {
+        res.status(401).json({ error: 'Invalid email or passcode.' });
+        return;
+      }
+      const { passcode: _, ...hostData } = host;
+      res.json(jsonOk(hostData));
+    } catch (error) {
+      console.warn('Host login Firestore error:', error instanceof Error ? error.message : error);
+      res.status(500).json({ error: 'Login failed.' });
+    }
+  } catch (error) {
+    console.error('Error in host login:', error);
+    res.status(500).json({ error: 'Login failed.' });
+  }
+});
+
+// ============ Admin Host Application Endpoints ============
+
+app.get('/admin/host-applications', requireAdminPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
+  try {
+    const applications = await getHostApplications();
+    res.json(jsonOk(applications));
+  } catch (error) {
+    console.error('Error fetching host applications:', error);
+    res.status(500).json({ error: 'Failed to fetch host applications' });
+  }
+});
+
+app.post('/admin/host-applications/:id/approve', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const { id } = req.params;
+    const application = await getHostApplication(id);
+    if (!application) {
+      res.status(404).json({ error: 'Host application not found.' });
+      return;
+    }
+    if (application.status === 'approved') {
+      res.status(400).json({ error: 'Application is already approved.' });
+      return;
+    }
+
+    const passcode = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 6);
+
+    try {
+      await updateHostApplicationStatus(id, 'approved');
+      const host = await createHost(application, passcode);
+      res.json(jsonOk({ hostId: host.id, passcode }));
+    } catch (error) {
+      console.warn('Approve host application Firestore error:', error instanceof Error ? error.message : error);
+      res.status(500).json({ error: 'Failed to approve application.' });
+    }
+  } catch (error) {
+    console.error('Error approving host application:', error);
+    res.status(500).json({ error: 'Failed to approve application.' });
+  }
+});
+
+app.post('/admin/host-applications/:id/reject', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const { id } = req.params;
+    const application = await getHostApplication(id);
+    if (!application) {
+      res.status(404).json({ error: 'Host application not found.' });
+      return;
+    }
+
+    try {
+      await updateHostApplicationStatus(id, 'rejected');
+      res.json(jsonOk({ ok: true }));
+    } catch (error) {
+      console.warn('Reject host application Firestore error:', error instanceof Error ? error.message : error);
+      res.status(500).json({ error: 'Failed to reject application.' });
+    }
+  } catch (error) {
+    console.error('Error rejecting host application:', error);
+    res.status(500).json({ error: 'Failed to reject application.' });
   }
 });
 

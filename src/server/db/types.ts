@@ -118,6 +118,21 @@ export interface HostApplication {
   updatedAt: Date;
 }
 
+export interface Host {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  experience: string;
+  bio: string;
+  profileImage: string;
+  passcode: string;
+  status: 'active' | 'suspended';
+  applicationId: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface ViewerSnapshot {
   id: string;
   tourId: string;

@@ -123,6 +123,50 @@ export async function submitHostApplication(input: HostApplicationInput) {
   });
 }
 
+// ============ Host Auth ============
+
+export interface HostData {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  experience: string;
+  bio: string;
+  profileImage: string;
+  status: 'active' | 'suspended';
+  applicationId: string;
+  createdAt: string;
+}
+
+export async function hostLogin(email: string, passcode: string) {
+  return request<ApiResult<HostData>>('/api/auth/host-login', {
+    method: 'POST',
+    body: JSON.stringify({ email, passcode }),
+  });
+}
+
+// ============ Admin Host Applications ============
+
+export async function adminGetHostApplications(passcode: string) {
+  return request<ApiResult<HostApplicationInput[] & { id: string; status: string }[]>>('/admin/host-applications', {
+    headers: adminHeaders(passcode),
+  });
+}
+
+export async function adminApproveHostApplication(passcode: string, id: string) {
+  return request<ApiResult<{ hostId: string; passcode: string }>>(`/admin/host-applications/${id}/approve`, {
+    method: 'POST',
+    headers: adminHeaders(passcode),
+  });
+}
+
+export async function adminRejectHostApplication(passcode: string, id: string) {
+  return request<ApiResult<{ ok: true }>>(`/admin/host-applications/${id}/reject`, {
+    method: 'POST',
+    headers: adminHeaders(passcode),
+  });
+}
+
 // ============ Admin Stream Providers ============
 
 export interface StreamProvider {
