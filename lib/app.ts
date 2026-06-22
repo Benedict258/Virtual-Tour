@@ -9,6 +9,7 @@ import {
   addNewsletterSubscriber,
   getRecommendedTours,
   getActiveLiveTour,
+  getLiveTour,
   updateLiveTour,
   createStreamProvider,
   getStreamProvider,
@@ -25,8 +26,16 @@ import {
   getOperationLogs,
   writeViewerSnapshot,
   getAnalyticsSummary,
+  createHostApplication,
+  getHostApplication,
+  getHostApplications,
+  updateHostApplicationStatus,
+  createHost,
+  getHostByEmail,
+  getHosts,
+  updateHost,
 } from '../src/server/db/services';
-import type { StreamProvider, LiveTour } from '../src/server/db/types';
+import type { StreamProvider, LiveTour, HostApplication } from '../src/server/db/types';
 
 const app = express();
 
@@ -69,7 +78,7 @@ if (!process.env.VERCEL) {
       res.header('Access-Control-Allow-Origin', origin);
       res.header('Vary', 'Origin');
     }
-    res.header('Access-Control-Allow-Headers', 'X-Admin-Passcode, Content-Type');
+    res.header('Access-Control-Allow-Headers', 'X-Admin-Passcode, X-Host-Passcode, Content-Type');
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     if (req.method === 'OPTIONS') { res.sendStatus(204); return; }
     next();
@@ -103,6 +112,35 @@ function requireFirebaseMiddleware(req: express.Request, res: express.Response, 
     return;
   }
   next();
+}
+
+async function requireHostPasscode(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const passcode = req.headers['x-host-passcode'];
+  if (!passcode || typeof passcode !== 'string') {
+    res.status(401).json({ error: 'Invalid or missing host passcode.' });
+    return;
+  }
+  try {
+    const hosts = await getHosts();
+    const host = hosts.find(h => h.passcode === passcode && h.status === 'active');
+    if (!host) {
+      res.status(401).json({ error: 'Invalid host passcode.' });
+      return;
+    }
+    (req as any).hostData = host;
+    next();
+  } catch {
+    res.status(500).json({ error: 'Failed to verify host passcode.' });
+  }
+}
+
+async function requireHostOrAdmin(req: express.Request, res: express.Response, next: express.NextFunction) {
+  const adminPasscode = req.headers['x-admin-passcode'];
+  if (adminPasscode && adminPasscode === ADMIN_PASSCODE) {
+    next();
+    return;
+  }
+  await requireHostPasscode(req, res, next);
 }
 
 app.get('/api/health', (_req, res) => {
@@ -328,10 +366,19 @@ app.get('/admin/tours', requireAdminPasscode, requireFirebaseMiddleware, async (
   }
 });
 
-app.put('/admin/tours/:id', requireAdminPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
+app.put('/admin/tours/:id', requireHostOrAdmin, requireFirebaseMiddleware, async (_req: express.Request, res) => {
   try {
     const { id } = _req.params;
     const { title, shortDescription, hostName, location, status, metadata } = _req.body;
+    const hostData = (_req as any).hostData;
+
+    if (hostData) {
+      const existing = await getLiveTour(id);
+      if (!existing || existing.hostId !== hostData.id) {
+        res.status(403).json({ error: 'You can only manage your own tours.' });
+        return;
+      }
+    }
 
     const updates: Partial<LiveTour> = {};
 
@@ -378,9 +425,19 @@ app.put('/admin/tours/:id', requireAdminPasscode, requireFirebaseMiddleware, asy
   }
 });
 
-app.delete('/admin/tours/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+app.delete('/admin/tours/:id', requireHostOrAdmin, requireFirebaseMiddleware, async (req: express.Request, res) => {
   try {
     const { id } = req.params;
+    const hostData = (req as any).hostData;
+
+    if (hostData) {
+      const existing = await getLiveTour(id);
+      if (!existing || existing.hostId !== hostData.id) {
+        res.status(403).json({ error: 'You can only manage your own tours.' });
+        return;
+      }
+    }
+
     const db = getRealtimeDB();
     await db.ref(COLLECTIONS.live_tours).child(id).remove();
     res.json(jsonOk({ ok: true }));
@@ -596,6 +653,297 @@ app.delete('/admin/tour-requests/:id', requireAdminPasscode, requireFirebaseMidd
   }
 });
 
+// ============ Host Dashboard Endpoints ============
+
+app.get('/host/my-tours', requireHostPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const hostData = (req as any).hostData;
+    const tours = await getLiveTourHistory(100);
+    const myTours = tours.filter(
+      (t: any) => t.hostId === hostData.id || t.hostName === hostData.name || t.hostName === hostData.email,
+    );
+    res.json(jsonOk(myTours));
+  } catch (error) {
+    console.error('Error fetching host tours:', error);
+    res.status(500).json({ error: 'Failed to fetch tours.' });
+  }
+});
+
+app.post('/host/tours', requireHostPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const hostData = (req as any).hostData;
+    const { streamProviderId, title, shortDescription, location, metadata } = req.body;
+
+    if (!streamProviderId || typeof streamProviderId !== 'string') {
+      res.status(400).json({ error: 'Stream provider ID is required.' });
+      return;
+    }
+
+    if (!title || typeof title !== 'string' || title.trim().length < 1) {
+      res.status(400).json({ error: 'Tour title is required.' });
+      return;
+    }
+
+    const provider = await getStreamProvider(streamProviderId);
+    if (!provider) {
+      res.status(404).json({ error: 'Stream provider not found.' });
+      return;
+    }
+
+    const tour = await createLiveTour({
+      streamProviderId,
+      title: title.trim(),
+      shortDescription: (shortDescription || '').trim(),
+      hostName: hostData.name,
+      hostId: hostData.id,
+      location: (location || '').trim(),
+      status: 'draft',
+      metadata: metadata || {},
+    });
+
+    res.status(201).json(jsonOk(tour));
+  } catch (error) {
+    console.error('Error creating host tour:', error);
+    res.status(500).json({ error: 'Failed to create tour.' });
+  }
+});
+
+app.get('/host/streams', requireHostPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
+  try {
+    const providers = await getStreamProviders();
+    res.json(jsonOk(providers));
+  } catch (error) {
+    console.error('Error fetching stream providers for host:', error);
+    res.status(500).json({ error: 'Failed to fetch stream providers.' });
+  }
+});
+
+app.put('/host/tours/:id', requireHostPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const hostData = (req as any).hostData;
+    const { id } = req.params;
+    const { title, shortDescription, location, status, metadata } = req.body;
+
+    const existing = await getLiveTour(id);
+    if (!existing || existing.hostId !== hostData.id) {
+      res.status(403).json({ error: 'You can only manage your own tours.' });
+      return;
+    }
+
+    const updates: Partial<LiveTour> = {};
+    if (title) updates.title = title.trim();
+    if (shortDescription !== undefined) updates.shortDescription = (shortDescription || '').trim();
+    if (location !== undefined) updates.location = (location || '').trim();
+    if (status) {
+      if (!['draft', 'scheduled', 'live', 'ended'].includes(status)) {
+        res.status(400).json({ error: 'Invalid tour status.' });
+        return;
+      }
+      updates.status = status;
+    }
+    if (metadata) updates.metadata = metadata;
+
+    await updateLiveTour(id, updates);
+
+    if (status) {
+      void writeOperationLog({
+        userId: hostData.id,
+        action: status === 'live' ? 'tour_go_live' : status === 'ended' ? 'tour_end' : 'tour_update',
+        resourceType: 'live_tour',
+        resourceId: id,
+        changes: updates,
+        status: 'success',
+      });
+    }
+
+    res.json(jsonOk({ ok: true }));
+  } catch (error) {
+    console.error('Error updating host tour:', error);
+    res.status(500).json({ error: 'Failed to update tour.' });
+  }
+});
+
+app.delete('/host/tours/:id', requireHostPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const hostData = (req as any).hostData;
+    const { id } = req.params;
+
+    const existing = await getLiveTour(id);
+    if (!existing || existing.hostId !== hostData.id) {
+      res.status(403).json({ error: 'You can only manage your own tours.' });
+      return;
+    }
+
+    const db = getRealtimeDB();
+    await db.ref(COLLECTIONS.live_tours).child(id).remove();
+    res.json(jsonOk({ ok: true }));
+  } catch (error) {
+    console.error('Error deleting host tour:', error);
+    res.status(500).json({ error: 'Failed to delete tour.' });
+  }
+});
+
+app.put('/host/profile', requireHostPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const hostData = (req as any).hostData;
+    const { bio, profileImage } = req.body;
+    const updates: Record<string, string> = {};
+    if (bio !== undefined) updates.bio = sanitise(bio, 1000);
+    if (profileImage !== undefined) updates.profileImage = sanitise(profileImage, 500);
+    await updateHost(hostData.id, updates);
+    res.json(jsonOk({ ok: true }));
+  } catch (error) {
+    console.error('Error updating host profile:', error);
+    res.status(500).json({ error: 'Failed to update profile.' });
+  }
+});
+
+// ============ Host Auth Endpoints ============
+
+app.post('/api/auth/host-login', requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const email = sanitise(req.body?.email, 254).toLowerCase();
+    const passcode = sanitise(req.body?.passcode, 100);
+
+    if (!isEmail(email)) {
+      res.status(400).json({ error: 'Enter a valid email address.' });
+      return;
+    }
+
+    if (!passcode) {
+      res.status(400).json({ error: 'Passcode is required.' });
+      return;
+    }
+
+    try {
+      const host = await getHostByEmail(email);
+      if (!host || host.passcode !== passcode || host.status !== 'active') {
+        res.status(401).json({ error: 'Invalid email or passcode.' });
+        return;
+      }
+      const { passcode: _, ...hostData } = host;
+      res.json(jsonOk(hostData));
+    } catch (error) {
+      console.warn('Host login Firestore error:', error instanceof Error ? error.message : error);
+      res.status(500).json({ error: 'Login failed.' });
+    }
+  } catch (error) {
+    console.error('Error in host login:', error);
+    res.status(500).json({ error: 'Login failed.' });
+  }
+});
+
+// ============ Admin Host Application Endpoints ============
+
+app.get('/admin/host-applications', requireAdminPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
+  try {
+    const applications = await getHostApplications();
+    res.json(jsonOk(applications));
+  } catch (error) {
+    console.error('Error fetching host applications:', error);
+    res.status(500).json({ error: 'Failed to fetch host applications' });
+  }
+});
+
+app.post('/admin/host-applications/:id/approve', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const { id } = req.params;
+    const application = await getHostApplication(id);
+    if (!application) {
+      res.status(404).json({ error: 'Host application not found.' });
+      return;
+    }
+    if (application.status === 'approved') {
+      res.status(400).json({ error: 'Application is already approved.' });
+      return;
+    }
+
+    const passcode = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 6);
+
+    try {
+      await updateHostApplicationStatus(id, 'approved');
+      const host = await createHost(application, passcode);
+      res.json(jsonOk({ hostId: host.id, passcode }));
+    } catch (error) {
+      console.warn('Approve host application Firestore error:', error instanceof Error ? error.message : error);
+      res.status(500).json({ error: 'Failed to approve application.' });
+    }
+  } catch (error) {
+    console.error('Error approving host application:', error);
+    res.status(500).json({ error: 'Failed to approve application.' });
+  }
+});
+
+app.post('/admin/host-applications/:id/reject', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const { id } = req.params;
+    const application = await getHostApplication(id);
+    if (!application) {
+      res.status(404).json({ error: 'Host application not found.' });
+      return;
+    }
+
+    try {
+      await updateHostApplicationStatus(id, 'rejected');
+      res.json(jsonOk({ ok: true }));
+    } catch (error) {
+      console.warn('Reject host application Firestore error:', error instanceof Error ? error.message : error);
+      res.status(500).json({ error: 'Failed to reject application.' });
+    }
+  } catch (error) {
+    console.error('Error rejecting host application:', error);
+    res.status(500).json({ error: 'Failed to reject application.' });
+  }
+});
+
+// ============ Admin Hosts Endpoints ============
+
+app.get('/admin/hosts', requireAdminPasscode, requireFirebaseMiddleware, async (_req: express.Request, res) => {
+  try {
+    const hosts = await getHosts();
+    const safeHosts = hosts.map(({ passcode: _, ...rest }) => rest);
+    res.json(jsonOk(safeHosts));
+  } catch (error) {
+    console.error('Error fetching hosts:', error);
+    res.status(500).json({ error: 'Failed to fetch hosts' });
+  }
+});
+
+app.put('/admin/hosts/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const { id } = req.params;
+    const { status, bio, profileImage } = req.body;
+
+    if (status && !['active', 'suspended'].includes(status)) {
+      res.status(400).json({ error: 'Invalid host status.' });
+      return;
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (status) updates.status = status;
+    if (bio !== undefined) updates.bio = sanitise(bio, 1000);
+    if (profileImage !== undefined) updates.profileImage = sanitise(profileImage, 500);
+
+    await updateHost(id, updates);
+    res.json(jsonOk({ ok: true }));
+  } catch (error) {
+    console.error('Error updating host:', error);
+    res.status(500).json({ error: 'Failed to update host' });
+  }
+});
+
+app.delete('/admin/hosts/:id', requireAdminPasscode, requireFirebaseMiddleware, async (req: express.Request, res) => {
+  try {
+    const { id } = req.params;
+    const { deleteHost } = await import('../src/server/db/services');
+    await deleteHost(id);
+    res.json(jsonOk({ ok: true }));
+  } catch (error) {
+    console.error('Error deleting host:', error);
+    res.status(500).json({ error: 'Failed to delete host' });
+  }
+});
+
 // ============ Public API Endpoints ============
 
 app.get('/api/recommended-tours', async (_req, res) => {
@@ -673,6 +1021,46 @@ app.post('/api/newsletter', publicFormLimiter, async (req, res) => {
   } catch (error) {
     console.error('Error adding newsletter subscriber:', error);
     res.status(500).json({ error: 'Failed to subscribe' });
+  }
+});
+
+app.post('/api/host-applications', publicFormLimiter, async (req, res) => {
+  try {
+    const name = sanitise(req.body?.name, 100);
+    const email = sanitise(req.body?.email, 254).toLowerCase();
+    const phone = sanitise(req.body?.phone, 30);
+    const experience = sanitise(req.body?.experience, 500);
+
+    if (name.length < 2) {
+      res.status(400).json({ error: 'Enter your full name (at least 2 characters).' });
+      return;
+    }
+
+    if (!isEmail(email)) {
+      res.status(400).json({ error: 'Enter a valid email address.' });
+      return;
+    }
+
+    if (phone.length < 5) {
+      res.status(400).json({ error: 'Enter a valid phone number (at least 5 characters).' });
+      return;
+    }
+
+    if (!experience) {
+      res.status(400).json({ error: 'Please describe your experience.' });
+      return;
+    }
+
+    try {
+      await createHostApplication(name, email, phone, experience);
+    } catch (error) {
+      console.warn('Could not save to Firestore:', error instanceof Error ? error.message : error);
+    }
+
+    res.status(201).json(jsonOk({ ok: true }));
+  } catch (error) {
+    console.error('Error creating host application:', error);
+    res.status(500).json({ error: 'Failed to process request' });
   }
 });
 

@@ -6,6 +6,8 @@ import type {
   RecommendedTour,
   CatalogTour,
   StreamProvider,
+  HostApplication,
+  Host,
 } from './types';
 
 // Utility to convert RTDB object to array
@@ -117,6 +119,130 @@ export async function updateTourRequestStatus(
   });
 }
 
+// ============ Host Applications ============
+
+export async function createHostApplication(
+  name: string,
+  email: string,
+  phone: string,
+  experience: string,
+): Promise<HostApplication> {
+  const db = getRealtimeDB();
+  const ref = db.ref(COLLECTIONS.host_applications).push();
+  const now = new Date();
+
+  const application: HostApplication = {
+    id: ref.key!,
+    name,
+    email,
+    phone,
+    experience,
+    status: 'pending',
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await ref.set({
+    ...application,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  });
+  return application;
+}
+
+export async function getHostApplication(id: string): Promise<HostApplication | null> {
+  const db = getRealtimeDB();
+  const snapshot = await db.ref(COLLECTIONS.host_applications).child(id).get();
+  if (!snapshot.exists()) return null;
+  const data = snapshot.val();
+  return {
+    ...data,
+    createdAt: new Date(data.createdAt),
+    updatedAt: new Date(data.updatedAt),
+  };
+}
+
+export async function getHostApplications(status?: 'pending' | 'approved' | 'rejected'): Promise<HostApplication[]> {
+  const db = getRealtimeDB();
+  const snapshot = await db.ref(COLLECTIONS.host_applications).get();
+  let results = toArray<HostApplication>(snapshot.val());
+  if (status) {
+    results = results.filter(r => r.status === status);
+  }
+  return results.sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+}
+
+export async function updateHostApplicationStatus(
+  id: string,
+  status: 'pending' | 'approved' | 'rejected',
+): Promise<void> {
+  const db = getRealtimeDB();
+  await db.ref(COLLECTIONS.host_applications).child(id).update({
+    status,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+// ============ Hosts ============
+
+export async function createHost(
+  application: HostApplication,
+  passcode: string,
+): Promise<Host> {
+  const db = getRealtimeDB();
+  const ref = db.ref(COLLECTIONS.hosts).push();
+  const now = new Date();
+
+  const host: Host = {
+    id: ref.key!,
+    name: application.name,
+    email: application.email,
+    phone: application.phone,
+    experience: application.experience,
+    bio: '',
+    profileImage: '',
+    passcode,
+    status: 'active',
+    applicationId: application.id,
+    createdAt: now,
+    updatedAt: now,
+  };
+
+  await ref.set({
+    ...host,
+    createdAt: now.toISOString(),
+    updatedAt: now.toISOString(),
+  });
+  return host;
+}
+
+export async function getHostByEmail(email: string): Promise<Host | null> {
+  const db = getRealtimeDB();
+  const snapshot = await db.ref(COLLECTIONS.hosts).get();
+  const hosts = toArray<Host>(snapshot.val());
+  return hosts.find(h => h.email === email.toLowerCase()) ?? null;
+}
+
+export async function getHosts(): Promise<Host[]> {
+  const db = getRealtimeDB();
+  const snapshot = await db.ref(COLLECTIONS.hosts).get();
+  return toArray<Host>(snapshot.val())
+    .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+}
+
+export async function updateHost(id: string, updates: Partial<Host>): Promise<void> {
+  const db = getRealtimeDB();
+  await db.ref(COLLECTIONS.hosts).child(id).update({
+    ...updates,
+    updatedAt: new Date().toISOString(),
+  });
+}
+
+export async function deleteHost(id: string): Promise<void> {
+  const db = getRealtimeDB();
+  await db.ref(COLLECTIONS.hosts).child(id).remove();
+}
+
 // ============ Newsletter Subscribers ============
 
 export async function addNewsletterSubscriber(
@@ -220,6 +346,18 @@ export async function deleteRecommendedTour(id: string): Promise<void> {
 }
 
 // ============ Live Tours ============
+
+export async function getLiveTour(id: string): Promise<LiveTour | null> {
+  const db = getRealtimeDB();
+  const snapshot = await db.ref(COLLECTIONS.live_tours).child(id).get();
+  if (!snapshot.exists()) return null;
+  const data = snapshot.val();
+  return {
+    ...data,
+    createdAt: data.createdAt ? new Date(data.createdAt) : new Date(),
+    updatedAt: data.updatedAt ? new Date(data.updatedAt) : new Date(),
+  } as LiveTour;
+}
 
 export async function getActiveLiveTour(): Promise<LiveTour | null> {
   const db = getRealtimeDB();

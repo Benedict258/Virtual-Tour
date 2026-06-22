@@ -109,6 +109,110 @@ export async function subscribeToNewsletter(input: NewsletterInput) {
   });
 }
 
+export interface HostApplicationInput {
+  name: string;
+  email: string;
+  phone: string;
+  experience: string;
+}
+
+export async function submitHostApplication(input: HostApplicationInput) {
+  return request<ApiResult<{ ok: true }>>('/api/host-applications', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  });
+}
+
+// ============ Host Auth ============
+
+export interface HostData {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  experience: string;
+  bio: string;
+  profileImage: string;
+  status: 'active' | 'suspended';
+  applicationId: string;
+  createdAt: string;
+}
+
+export async function hostLogin(email: string, passcode: string) {
+  return request<ApiResult<HostData>>('/api/auth/host-login', {
+    method: 'POST',
+    body: JSON.stringify({ email, passcode }),
+  });
+}
+
+// ============ Admin Host Applications ============
+
+export interface HostApplicationRecord {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  experience: string;
+  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+}
+
+export async function adminGetHostApplications(passcode: string) {
+  return request<ApiResult<HostApplicationRecord[]>>('/admin/host-applications', {
+    headers: adminHeaders(passcode),
+  });
+}
+
+export async function adminApproveHostApplication(passcode: string, id: string) {
+  return request<ApiResult<{ hostId: string; passcode: string }>>(`/admin/host-applications/${id}/approve`, {
+    method: 'POST',
+    headers: adminHeaders(passcode),
+  });
+}
+
+export async function adminRejectHostApplication(passcode: string, id: string) {
+  return request<ApiResult<{ ok: true }>>(`/admin/host-applications/${id}/reject`, {
+    method: 'POST',
+    headers: adminHeaders(passcode),
+  });
+}
+
+// ============ Admin Hosts ============
+
+export interface AdminHostRecord {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  experience: string;
+  bio: string;
+  profileImage: string;
+  status: 'active' | 'suspended';
+  applicationId: string;
+  createdAt: string;
+}
+
+export async function adminGetHosts(passcode: string) {
+  return request<ApiResult<AdminHostRecord[]>>('/admin/hosts', {
+    headers: adminHeaders(passcode),
+  });
+}
+
+export async function adminUpdateHost(passcode: string, id: string, data: Partial<Pick<AdminHostRecord, 'status' | 'bio' | 'profileImage'>>) {
+  return request<ApiResult<{ ok: true }>>(`/admin/hosts/${id}`, {
+    method: 'PUT',
+    headers: adminHeaders(passcode),
+    body: JSON.stringify(data),
+  });
+}
+
+export async function adminDeleteHost(passcode: string, id: string) {
+  return request<ApiResult<{ ok: true }>>(`/admin/hosts/${id}`, {
+    method: 'DELETE',
+    headers: adminHeaders(passcode),
+  });
+}
+
 // ============ Admin Stream Providers ============
 
 export interface StreamProvider {
@@ -254,6 +358,67 @@ export interface NewsletterSubscriber {
 export async function getNewsletterSubscribers(passcode: string) {
   return request<ApiResult<NewsletterSubscriber[]>>('/admin/newsletter', {
     headers: adminHeaders(passcode),
+  });
+}
+
+// ============ Host Dashboard API ============
+
+export async function hostGetMyTours(passcode: string) {
+  return request<ApiResult<LiveTourRecord[]>>('/host/my-tours', {
+    headers: { 'X-Host-Passcode': passcode },
+  });
+}
+
+export async function hostCreateTour(
+  passcode: string,
+  data: {
+    title: string;
+    shortDescription?: string;
+    location?: string;
+    streamProviderId: string;
+    metadata?: LiveTourRecord['metadata'];
+  },
+) {
+  return request<ApiResult<LiveTourRecord>>('/host/tours', {
+    method: 'POST',
+    headers: { 'X-Host-Passcode': passcode },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function hostGetStreamProviders(passcode: string) {
+  return request<ApiResult<StreamProvider[]>>('/host/streams', {
+    headers: { 'X-Host-Passcode': passcode },
+  });
+}
+
+export async function hostUpdateTour(
+  passcode: string,
+  id: string,
+  data: Partial<Omit<LiveTourRecord, 'id' | 'createdAt'>>,
+) {
+  return request<ApiResult<{ ok: true }>>(`/host/tours/${id}`, {
+    method: 'PUT',
+    headers: { 'X-Host-Passcode': passcode },
+    body: JSON.stringify(data),
+  });
+}
+
+export async function hostDeleteTour(passcode: string, id: string) {
+  return request<ApiResult<{ ok: true }>>(`/host/tours/${id}`, {
+    method: 'DELETE',
+    headers: { 'X-Host-Passcode': passcode },
+  });
+}
+
+export async function hostUpdateProfile(
+  passcode: string,
+  data: { bio?: string; profileImage?: string },
+) {
+  return request<ApiResult<{ ok: true }>>('/host/profile', {
+    method: 'PUT',
+    headers: { 'X-Host-Passcode': passcode },
+    body: JSON.stringify(data),
   });
 }
 

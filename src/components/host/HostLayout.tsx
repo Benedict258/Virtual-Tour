@@ -1,45 +1,40 @@
 import { useState } from 'react';
-import { BarChart2, BookOpen, Globe, LayoutDashboard, LogOut, Mail, Menu, Radio, Star, Users, X } from 'lucide-react';
+import { Globe, LayoutDashboard, LogOut, Menu, Radio, User, X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { cn } from '../../lib/utils';
-import { useAdminAuth } from './AdminAuthContext';
-import AdminLogin from './AdminLogin';
+import { useHostAuth } from './HostAuthContext';
+import HostLogin from './HostLogin';
 
-type AdminView = 'dashboard' | 'live' | 'providers' | 'recommended' | 'catalog' | 'requests' | 'newsletter' | 'host_stream' | 'applications' | 'hosts';
+type HostView = 'dashboard' | 'go_live' | 'tours' | 'profile';
 
-interface AdminLayoutProps {
+interface HostLayoutProps {
   children: ReactNode;
-  currentView: AdminView;
-  onNavigate: (view: AdminView) => void;
+  currentView: HostView;
+  onNavigate: (view: HostView) => void;
 }
 
-const NAV_ITEMS: { id: AdminView; label: string; icon: typeof LayoutDashboard }[] = [
+const NAV_ITEMS: { id: HostView; label: string; icon: typeof LayoutDashboard }[] = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { id: 'live', label: 'Live Control', icon: Radio },
-  { id: 'providers', label: 'Stream Providers', icon: Globe },
-  { id: 'recommended', label: 'Recommended Tours', icon: Star },
-  { id: 'catalog', label: 'Catalog Tours', icon: BookOpen },
-  { id: 'requests', label: 'Tour Requests', icon: Users },
-  { id: 'applications', label: 'Applications', icon: Users },
-  { id: 'hosts', label: 'Hosts', icon: Globe },
-  { id: 'newsletter', label: 'Newsletter', icon: Mail },
+  { id: 'tours', label: 'My Tours', icon: Radio },
+  { id: 'go_live', label: 'Go Live', icon: Radio },
+  { id: 'profile', label: 'Profile', icon: User },
 ];
 
-export default function AdminLayout({ children, currentView, onNavigate }: AdminLayoutProps) {
-  const { passcode, logout } = useAdminAuth();
+export default function HostLayout({ children, currentView, onNavigate }: HostLayoutProps) {
+  const { passcode, host, logout } = useHostAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  if (!passcode) return <AdminLogin />;
+  if (!passcode) return <HostLogin />;
 
   return (
     <div className="min-h-screen bg-muted flex">
       {/* Mobile header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-50 bg-white border-b border-border px-4 py-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <div className="size-7 rounded-full bg-coral flex items-center justify-center text-white">
+          <div className="size-7 rounded-full bg-teal flex items-center justify-center text-white">
             <Globe className="size-4" />
           </div>
-          <p className="font-bold text-sm text-dark">Admin</p>
+          <p className="font-bold text-sm text-dark">{host?.name || 'Host'}</p>
         </div>
         <button
           onClick={() => setIsSidebarOpen(true)}
@@ -65,12 +60,12 @@ export default function AdminLayout({ children, currentView, onNavigate }: Admin
         )}>
           <div className="p-5 border-b border-border flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="size-7 rounded-full bg-coral flex items-center justify-center text-white">
+              <div className="size-7 rounded-full bg-teal flex items-center justify-center text-white">
                 <Globe className="size-4" />
               </div>
               <div>
-                <p className="font-bold text-sm text-dark leading-none">Lagos Rhythm</p>
-                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">Admin</p>
+                <p className="font-bold text-sm text-dark leading-none">{host?.name || 'Host'}</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">Host Portal</p>
               </div>
             </div>
             <button
@@ -89,7 +84,7 @@ export default function AdminLayout({ children, currentView, onNavigate }: Admin
                 className={cn(
                   'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors text-left',
                   currentView === id
-                    ? 'bg-coral/10 text-coral'
+                    ? 'bg-teal/10 text-teal'
                     : 'text-dark hover:bg-muted',
                 )}
               >
@@ -113,12 +108,12 @@ export default function AdminLayout({ children, currentView, onNavigate }: Admin
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-60 bg-white border-r border-border flex-col fixed inset-y-0 left-0 z-40">
         <div className="p-5 border-b border-border flex items-center gap-2">
-          <div className="size-7 rounded-full bg-coral flex items-center justify-center text-white">
+          <div className="size-7 rounded-full bg-teal flex items-center justify-center text-white">
             <Globe className="size-4" />
           </div>
           <div>
-            <p className="font-bold text-sm text-dark leading-none">Lagos Rhythm</p>
-            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">Admin</p>
+            <p className="font-bold text-sm text-dark leading-none">{host?.name || 'Host'}</p>
+            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest mt-0.5">Host Portal</p>
           </div>
         </div>
 
@@ -130,7 +125,7 @@ export default function AdminLayout({ children, currentView, onNavigate }: Admin
               className={cn(
                 'w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors text-left',
                 currentView === id
-                  ? 'bg-coral/10 text-coral'
+                  ? 'bg-teal/10 text-teal'
                   : 'text-dark hover:bg-muted',
               )}
             >
@@ -159,4 +154,4 @@ export default function AdminLayout({ children, currentView, onNavigate }: Admin
   );
 }
 
-export type { AdminView };
+export type { HostView };

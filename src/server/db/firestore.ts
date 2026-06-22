@@ -86,6 +86,8 @@ export const COLLECTIONS = {
   newsletter_subscribers: 'newsletter_subscribers',
   viewer_events: 'viewer_events',
   operation_logs: 'operation_logs',
+  host_applications: 'host_applications',
+  hosts: 'hosts',
 } as const;
 
 export type CollectionName = (typeof COLLECTIONS)[keyof typeof COLLECTIONS];
